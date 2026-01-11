@@ -20,38 +20,217 @@ MainFrame:SetBackdrop({
     edgeFile = "Interface\\Buttons\\WHITE8x8",
     edgeSize = 2,
 })
-MainFrame:SetBackdropColor(0.1, 0.3, 0.6, 0.5)  -- Blue overlay
-MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Blue border
+MainFrame:SetBackdropColor(0.1, 0.3, 0.6, 0.1)  -- Very transparent blue overlay
+MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 0.3)  -- Semi-transparent blue border
 
--- Title text
+-- Title text (hidden since we show health frames now)
 local title = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", MainFrame, "TOP", 0, -10)
 title:SetText("vframes")
+title:Hide()
 
 -- Status text (shows current state)
 local statusText = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 statusText:SetPoint("CENTER", MainFrame, "CENTER", 0, 0)
 statusText:SetText("Edit Mode: Disabled")
+statusText:Hide()
 
 -- Instruction text
 local instructionText = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 instructionText:SetPoint("BOTTOM", MainFrame, "BOTTOM", 0, 10)
 instructionText:SetTextColor(0.7, 0.7, 0.7, 1)
 instructionText:SetText("Open Edit Mode to configure")
+instructionText:Hide()
+
+---------------------------------------------------------------------------
+-- Health Frames System
+---------------------------------------------------------------------------
+
+-- Table to store all health frames
+local healthFrames = {}
+
+-- Create a single health frame for a unit
+local function CreateHealthFrame(unit)
+    local frame = CreateFrame("Frame", nil, MainFrame, "BackdropTemplate")
+    frame:SetSize(120, 40)
+
+    -- Visual styling
+    frame:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    frame:SetBackdropColor(0, 0, 0, 0.7)
+    frame:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+
+    -- Health bar background
+    local healthBg = frame:CreateTexture(nil, "BACKGROUND")
+    healthBg:SetAllPoints(frame)
+    healthBg:SetColorTexture(0.2, 0.2, 0.2, 0.8)
+
+    -- Health bar (foreground)
+    local healthBar = frame:CreateTexture(nil, "ARTWORK")
+    healthBar:SetPoint("LEFT", frame, "LEFT", 0, 0)
+    healthBar:SetSize(120, 40)
+    healthBar:SetColorTexture(0, 0.8, 0, 0.8)
+    frame.healthBar = healthBar
+
+    -- Name text
+    local nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    nameText:SetPoint("TOP", frame, "TOP", 0, -5)
+    nameText:SetTextColor(1, 1, 1, 1)
+    frame.nameText = nameText
+
+    -- Health text
+    local healthText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    healthText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 5)
+    healthText:SetTextColor(1, 1, 1, 1)
+    frame.healthText = healthText
+
+    frame.unit = unit
+    frame:Hide()
+
+    return frame
+end
+
+-- Update a single health frame's data
+local function UpdateHealthFrame(frame)
+    if not frame or not frame.unit then return end
+
+    local unit = frame.unit
+
+    -- Check if unit exists
+    if not UnitExists(unit) then
+        frame:Hide()
+        return
+    end
+
+    frame:Show()
+
+    -- Update name
+    local name = UnitName(unit)
+    frame.nameText:SetText(name or "Unknown")
+
+    -- Update health
+    local health = UnitHealth(unit)
+    local maxHealth = UnitHealthMax(unit)
+    local healthPercent = (maxHealth > 0) and (health / maxHealth) or 0
+
+    -- Update health bar size
+    local frameWidth = frame:GetWidth()
+    frame.healthBar:SetWidth(frameWidth * healthPercent)
+
+    -- Update health text
+    frame.healthText:SetText(string.format("%d / %d", health, maxHealth))
+
+    -- Color health bar based on percentage
+    if healthPercent > 0.5 then
+        frame.healthBar:SetColorTexture(0, 0.8, 0, 0.8) -- Green
+    elseif healthPercent > 0.25 then
+        frame.healthBar:SetColorTexture(0.8, 0.8, 0, 0.8) -- Yellow
+    else
+        frame.healthBar:SetColorTexture(0.8, 0, 0, 0.8) -- Red
+    end
+end
+
+-- Update layout based on growth direction
+function UpdateHealthFramesLayout()
+    local settings = MainFrame.settings
+    local growthDirection = settings[SETTING_GROWTH_DIRECTION] or 1
+    local spacing = settings[SETTING_FRAME_SPACING] or 2
+
+    local visibleFrames = {}
+    for _, frame in ipairs(healthFrames) do
+        if frame:IsShown() then
+            table.insert(visibleFrames, frame)
+        end
+    end
+
+    for i, frame in ipairs(visibleFrames) do
+        frame:ClearAllPoints()
+
+        if i == 1 then
+            frame:SetPoint("TOPLEFT", MainFrame, "TOPLEFT", 5, -5)
+        else
+            local prevFrame = visibleFrames[i - 1]
+            if growthDirection == 1 then -- Horizontal
+                frame:SetPoint("LEFT", prevFrame, "RIGHT", spacing, 0)
+            else -- Vertical
+                frame:SetPoint("TOP", prevFrame, "BOTTOM", 0, -spacing)
+            end
+        end
+    end
+
+    -- Resize main frame to fit all health frames
+    if #visibleFrames > 0 then
+        local frameWidth = visibleFrames[1]:GetWidth()
+        local frameHeight = visibleFrames[1]:GetHeight()
+
+        if growthDirection == 1 then -- Horizontal
+            MainFrame:SetSize((frameWidth + spacing) * #visibleFrames + 5, frameHeight + 10)
+        else -- Vertical
+            MainFrame:SetSize(frameWidth + 10, (frameHeight + spacing) * #visibleFrames + 5)
+        end
+    end
+end
+
+-- Update all visible health frames
+local function UpdateAllHealthFrames()
+    -- Update player frame
+    if healthFrames[1] then
+        healthFrames[1].unit = "player"
+        UpdateHealthFrame(healthFrames[1])
+    end
+
+    -- Update party frames
+    local numPartyMembers = GetNumSubgroupMembers()
+    for i = 1, 4 do
+        local frameIndex = i + 1
+        if i <= numPartyMembers then
+            healthFrames[frameIndex].unit = "party" .. i
+            UpdateHealthFrame(healthFrames[frameIndex])
+        else
+            healthFrames[frameIndex]:Hide()
+        end
+    end
+
+    UpdateHealthFramesLayout()
+end
+
+-- Initialize health frames
+local function InitializeHealthFrames()
+    -- Create frames for player + 4 party members
+    for i = 1, 5 do
+        healthFrames[i] = CreateHealthFrame(i == 1 and "player" or ("party" .. (i - 1)))
+    end
+
+    -- Initial update
+    UpdateAllHealthFrames()
+
+    -- Set up update timer
+    C_Timer.NewTicker(0.1, UpdateAllHealthFrames)
+end
 
 ---------------------------------------------------------------------------
 -- Edit Mode Integration
 ---------------------------------------------------------------------------
 
 -- Edit Mode system settings definition
-local SETTING_DUMMY_OPTION = 1
+local SETTING_GROWTH_DIRECTION = 1
+local SETTING_FRAME_WIDTH = 2
+local SETTING_FRAME_HEIGHT = 3
+local SETTING_FRAME_SPACING = 4
 
 local function GetSettingsDialogOptions()
     return {
         {
-            setting = SETTING_DUMMY_OPTION,
-            name = "Dummy Option",
-            type = Enum.EditModeSettingDisplayType.Checkbox,
+            setting = SETTING_GROWTH_DIRECTION,
+            name = "Growth Direction",
+            type = Enum.EditModeSettingDisplayType.Dropdown,
+            options = {
+                {value = 1, text = "Horizontal"},
+                {value = 2, text = "Vertical"},
+            },
         },
     }
 end
@@ -73,7 +252,10 @@ local function SetupEditMode()
 
     -- Settings storage
     MainFrame.settings = {
-        [SETTING_DUMMY_OPTION] = false,
+        [SETTING_GROWTH_DIRECTION] = 1, -- 1 = Horizontal, 2 = Vertical
+        [SETTING_FRAME_WIDTH] = 120,
+        [SETTING_FRAME_HEIGHT] = 40,
+        [SETTING_FRAME_SPACING] = 2,
     }
 
     -- Required Edit Mode methods
@@ -85,8 +267,9 @@ local function SetupEditMode()
 
     MainFrame.SetSettingValue = function(self, setting, value)
         self.settings[setting] = value
-        if setting == SETTING_DUMMY_OPTION then
-            print("|cff00ff00vframes:|r Dummy Option set to:", value and "ON" or "OFF")
+        if setting == SETTING_GROWTH_DIRECTION then
+            print("|cff00ff00vframes:|r Growth Direction set to:", value == 1 and "Horizontal" or "Vertical")
+            UpdateHealthFramesLayout()
         end
     end
 
@@ -173,14 +356,10 @@ local function SetupEditMode()
 
     -- Hook into Edit Mode state changes
     hooksecurefunc(EditModeManagerFrame, "EnterEditMode", function()
-        statusText:SetText("Edit Mode: |cff00ff00ACTIVE|r")
-        statusText:SetTextColor(0.3, 1, 0.3, 1)
         MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Blue border in edit mode
     end)
 
     hooksecurefunc(EditModeManagerFrame, "ExitEditMode", function()
-        statusText:SetText("Edit Mode: Disabled")
-        statusText:SetTextColor(1, 1, 1, 1)
         MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Blue border when exiting
         MainFrame.Selection:Hide()
     end)
@@ -210,10 +389,13 @@ local function OnAddonLoaded(self, event, loadedAddon)
     -- Restore saved position
     RestorePosition()
 
+    -- Initialize health frames
+    InitializeHealthFrames()
+
     -- Setup Edit Mode after a short delay to ensure all systems are ready
     C_Timer.After(1, SetupEditMode)
 
-    print("|cff00ff00vframes|r loaded. Open Edit Mode (Esc > Edit Mode) to configure.")
+    print("|cff00ff00vframes|r loaded. Health frames active. Open Edit Mode (Esc > Edit Mode) to configure.")
 end
 
 MainFrame:RegisterEvent("ADDON_LOADED")
