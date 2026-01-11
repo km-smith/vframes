@@ -1,4 +1,4 @@
-## Interface: 110500
+## Interface: 120001
 ## Title: vframes
 ## Notes: A custom party/raid frame replacement with Edit Mode integration
 ## Author: Your Name
