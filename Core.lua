@@ -116,23 +116,45 @@ local function SetupEditMode()
         return false
     end
 
-    -- Drag handling for Edit Mode
+    -- Drag handling for Edit Mode with click detection
+    local isDragging = false
+    local mouseDownX, mouseDownY = 0, 0
+
     MainFrame:SetScript("OnMouseDown", function(self, button)
         if button == "LeftButton" and EditModeManagerFrame:IsEditModeActive() then
+            isDragging = false
+            mouseDownX, mouseDownY = GetCursorPosition()
             self:StartMoving()
         end
     end)
 
     MainFrame:SetScript("OnMouseUp", function(self, button)
+        if button ~= "LeftButton" then return end
         self:StopMovingOrSizing()
-        -- Save position
-        local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
-        vframesDB.position = {
-            point = point,
-            relativePoint = relativePoint,
-            x = xOfs,
-            y = yOfs,
-        }
+
+        -- Check if this was a click (minimal movement) vs a drag
+        local mouseUpX, mouseUpY = GetCursorPosition()
+        local distance = math.sqrt((mouseUpX - mouseDownX)^2 + (mouseUpY - mouseDownY)^2)
+
+        if distance < 5 and EditModeManagerFrame:IsEditModeActive() then
+            -- This was a click, toggle selection
+            local isSelected = MainFrame.Selection:IsShown()
+            MainFrame:SetSelectionShown(not isSelected)
+
+            if not isSelected then
+                print("|cff00ff00vframes:|r Frame selected! Settings would appear here.")
+                print("|cff00ff00vframes:|r Dummy Option is currently:", MainFrame.settings[SETTING_DUMMY_OPTION] and "ON" or "OFF")
+            end
+        else
+            -- This was a drag, save position
+            local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
+            vframesDB.position = {
+                point = point,
+                relativePoint = relativePoint,
+                x = xOfs,
+                y = yOfs,
+            }
+        end
     end)
 
     -- Register click handler for Edit Mode selection
@@ -162,24 +184,6 @@ local function SetupEditMode()
         MainFrame:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
         MainFrame.Selection:Hide()
     end)
-
-    -- Try to register with Edit Mode system (this may vary by WoW version)
-    -- For now, we use a simpler approach with click detection
-    MainFrame:SetScript("OnClick", function(self, button)
-        if EditModeManagerFrame:IsEditModeActive() then
-            -- Toggle selection
-            local isSelected = MainFrame.Selection:IsShown()
-            MainFrame:SetSelectionShown(not isSelected)
-
-            if not isSelected then
-                -- Show settings dialog
-                print("|cff00ff00vframes:|r Frame selected! Settings would appear here.")
-                print("|cff00ff00vframes:|r Dummy Option is currently:", MainFrame.settings[SETTING_DUMMY_OPTION] and "ON" or "OFF")
-            end
-        end
-    end)
-
-    MainFrame:RegisterForClicks("AnyUp")
 
     print("|cff00ff00vframes:|r Edit Mode integration loaded")
 end
