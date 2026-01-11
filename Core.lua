@@ -10,9 +10,23 @@ vframesDB = vframesDB or {}
 -- Main Frame Setup
 ---------------------------------------------------------------------------
 
+-- Edit Mode system settings definition
+local SETTING_GROWTH_DIRECTION = 1
+local SETTING_FRAME_WIDTH = 2
+local SETTING_FRAME_HEIGHT = 3
+local SETTING_FRAME_SPACING = 4
+
 local MainFrame = CreateFrame("Frame", "vframesFrame", UIParent, "BackdropTemplate")
 MainFrame:SetSize(200, 150)
 MainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+
+-- Initialize settings early (before health frames)
+MainFrame.settings = {
+    [SETTING_GROWTH_DIRECTION] = 1, -- 1 = Horizontal, 2 = Vertical
+    [SETTING_FRAME_WIDTH] = 120,
+    [SETTING_FRAME_HEIGHT] = 40,
+    [SETTING_FRAME_SPACING] = 2,
+}
 
 -- Visual styling
 MainFrame:SetBackdrop({
@@ -215,12 +229,6 @@ end
 -- Edit Mode Integration
 ---------------------------------------------------------------------------
 
--- Edit Mode system settings definition
-local SETTING_GROWTH_DIRECTION = 1
-local SETTING_FRAME_WIDTH = 2
-local SETTING_FRAME_HEIGHT = 3
-local SETTING_FRAME_SPACING = 4
-
 local function GetSettingsDialogOptions()
     return {
         {
@@ -249,14 +257,6 @@ local function SetupEditMode()
 
     -- Register for Edit Mode
     MainFrame.system = "vframes" -- Custom system identifier
-
-    -- Settings storage
-    MainFrame.settings = {
-        [SETTING_GROWTH_DIRECTION] = 1, -- 1 = Horizontal, 2 = Vertical
-        [SETTING_FRAME_WIDTH] = 120,
-        [SETTING_FRAME_HEIGHT] = 40,
-        [SETTING_FRAME_SPACING] = 2,
-    }
 
     -- Required Edit Mode methods
     MainFrame.GetSettingsDialogOptions = GetSettingsDialogOptions
