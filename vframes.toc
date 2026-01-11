@@ -1,0 +1,8 @@
+## Interface: 110200
+## Title: vframes
+## Notes: A custom party/raid frame replacement with Edit Mode integration
+## Author: Your Name
+## Version: 1.0.0
+## SavedVariables: vframesDB
+
+Core.lua
