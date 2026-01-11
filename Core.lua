@@ -20,8 +20,8 @@ MainFrame:SetBackdrop({
     edgeFile = "Interface\\Buttons\\WHITE8x8",
     edgeSize = 2,
 })
-MainFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.8)
-MainFrame:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+MainFrame:SetBackdropColor(0.1, 0.3, 0.6, 0.5)  -- Blue overlay
+MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Blue border
 
 -- Title text
 local title = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -101,7 +101,7 @@ local function SetupEditMode()
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 3,
     })
-    MainFrame.Selection:SetBackdropBorderColor(1, 0.82, 0, 1) -- Gold highlight
+    MainFrame.Selection:SetBackdropBorderColor(0.4, 0.8, 1, 1) -- Bright blue highlight
     MainFrame.Selection:Hide()
 
     MainFrame.SetSelectionShown = function(self, shown)
@@ -161,13 +161,13 @@ local function SetupEditMode()
     MainFrame:EnableMouse(true)
     MainFrame:SetScript("OnEnter", function(self)
         if EditModeManagerFrame:IsEditModeActive() then
-            self:SetBackdropBorderColor(1, 0.82, 0, 1)
+            self:SetBackdropBorderColor(0.4, 0.8, 1, 1)  -- Bright blue on hover
         end
     end)
 
     MainFrame:SetScript("OnLeave", function(self)
         if not MainFrame.Selection:IsShown() then
-            self:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+            self:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Return to blue border
         end
     end)
 
@@ -175,13 +175,13 @@ local function SetupEditMode()
     hooksecurefunc(EditModeManagerFrame, "EnterEditMode", function()
         statusText:SetText("Edit Mode: |cff00ff00ACTIVE|r")
         statusText:SetTextColor(0.3, 1, 0.3, 1)
-        MainFrame:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+        MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Blue border in edit mode
     end)
 
     hooksecurefunc(EditModeManagerFrame, "ExitEditMode", function()
         statusText:SetText("Edit Mode: Disabled")
         statusText:SetTextColor(1, 1, 1, 1)
-        MainFrame:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+        MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 1)  -- Blue border when exiting
         MainFrame.Selection:Hide()
     end)
 
