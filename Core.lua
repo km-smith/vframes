@@ -77,17 +77,19 @@ local function CreateHealthFrame(unit)
     frame:SetBackdropColor(0, 0, 0, 0.7)
     frame:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
 
-    -- Health bar background
-    local healthBg = frame:CreateTexture(nil, "BACKGROUND")
-    healthBg:SetAllPoints(frame)
-    healthBg:SetColorTexture(0.2, 0.2, 0.2, 0.8)
-
-    -- Health bar (foreground)
-    local healthBar = frame:CreateTexture(nil, "ARTWORK")
-    healthBar:SetPoint("LEFT", frame, "LEFT", 0, 0)
-    healthBar:SetSize(120, 40)
-    healthBar:SetColorTexture(0, 0.8, 0, 0.8)
+    -- Health bar (using StatusBar to support secret values in 12.0.0+)
+    local healthBar = CreateFrame("StatusBar", nil, frame)
+    healthBar:SetAllPoints(frame)
+    healthBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
+    healthBar:SetStatusBarColor(0, 0.8, 0, 0.8)
+    healthBar:SetMinMaxValues(0, 100)
+    healthBar:SetValue(100)
     frame.healthBar = healthBar
+
+    -- Health bar background
+    local healthBg = healthBar:CreateTexture(nil, "BACKGROUND")
+    healthBg:SetAllPoints(healthBar)
+    healthBg:SetColorTexture(0.2, 0.2, 0.2, 0.8)
 
     -- Name text
     local nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -125,25 +127,31 @@ local function UpdateHealthFrame(frame)
     local name = UnitName(unit)
     frame.nameText:SetText(name or "Unknown")
 
-    -- Update health
+    -- Update health (12.0.0+ secret values support)
+    -- StatusBar can accept secret values directly via SetValue/SetMinMaxValues
     local health = UnitHealth(unit)
     local maxHealth = UnitHealthMax(unit)
-    local healthPercent = (maxHealth > 0) and (health / maxHealth) or 0
 
-    -- Update health bar size
-    local frameWidth = frame:GetWidth()
-    frame.healthBar:SetWidth(frameWidth * healthPercent)
+    -- Set health bar values (StatusBar accepts secret values)
+    frame.healthBar:SetMinMaxValues(0, maxHealth)
+    frame.healthBar:SetValue(health)
 
-    -- Update health text
-    frame.healthText:SetText(string.format("%d / %d", health, maxHealth))
+    -- Calculate percentage for display and color (using GetValue which returns non-secret)
+    -- When we read back from StatusBar, it's no longer secret
+    local currentValue = frame.healthBar:GetValue()
+    local minValue, maxValue = frame.healthBar:GetMinMaxValues()
+    local healthPercent = (maxValue > 0) and (currentValue / maxValue) or 0
+
+    -- Update health text (now using non-secret values from StatusBar)
+    frame.healthText:SetText(string.format("%.0f%%", healthPercent * 100))
 
     -- Color health bar based on percentage
     if healthPercent > 0.5 then
-        frame.healthBar:SetColorTexture(0, 0.8, 0, 0.8) -- Green
+        frame.healthBar:SetStatusBarColor(0, 0.8, 0, 0.8) -- Green
     elseif healthPercent > 0.25 then
-        frame.healthBar:SetColorTexture(0.8, 0.8, 0, 0.8) -- Yellow
+        frame.healthBar:SetStatusBarColor(0.8, 0.8, 0, 0.8) -- Yellow
     else
-        frame.healthBar:SetColorTexture(0.8, 0, 0, 0.8) -- Red
+        frame.healthBar:SetStatusBarColor(0.8, 0, 0, 0.8) -- Red
     end
 end
 
