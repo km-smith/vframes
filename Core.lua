@@ -37,11 +37,11 @@ MainFrame:SetBackdrop({
 MainFrame:SetBackdropColor(0.1, 0.3, 0.6, 0.1)  -- Very transparent blue overlay
 MainFrame:SetBackdropBorderColor(0.3, 0.6, 0.9, 0.3)  -- Semi-transparent blue border
 
--- Title text (hidden since we show health frames now)
+-- Title text
 local title = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", MainFrame, "TOP", 0, -10)
 title:SetText("vframes")
-title:Hide()
+title:Show()
 
 -- Status text (shows current state)
 local statusText = MainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
